@@ -8,7 +8,6 @@ body { font-family: Arial, sans-serif; padding: 20px; }
 label { margin-right: 10px; }
 input[type=number] { width: 120px; }
 button { padding: 5px 10px; margin-left: 5px; }
-.valid { background-color: #d3ffd3; }
 </style>
 </head>
 <body>
@@ -27,55 +26,53 @@ button { padding: 5px 10px; margin-left: 5px; }
   <input type="number" id="montantDepense">
   <button onclick="ajouterDepense()">Valider Montant</button>
   <p id="totalDepense">Total dépensé chez vous : 0 DA</p>
-
-  <h3>Historique des transactions</h3>
-  <table id="historique" border="1" cellpadding="5">
-    <thead>
-      <tr>
-        <th>Nom Chauffeur</th>
-        <th>Montant (DA)</th>
-        <th>Date</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
 </div>
 
 <script>
 // Configuration Google Sheets
-const SHEET_ID = "TON_SHEET_ID";
-const RANGE_PARTENAIRES = "Partenaires!A:B";
-const RANGE_TRANSACTIONS = "Transactions!A:D";
+const SHEET_ID = "1f_rtQ_rGuj95fflCU31Lme7vOrK5UQdiexAZ9lj3nvs"; // remplace par ton Google Sheet ID
+const RANGE_PARTENAIRES = "Partenaires!A:B"; // ID et Nom Partenaire
+const RANGE_TRANSACTIONS = "Transactions!A:D"; // ID_Partenaire | Nom_Chauffeur | Montant | Date
 const API_KEY = "TON_API_KEY";
 
-// Données locales
+// Données en mémoire
 let partenaires = {};
 let transactions = [];
 let idConnecte = "";
 
-// Charger partenaires et transactions
+// Charger la liste des partenaires depuis Google Sheets
 async function loadPartenaires() {
-  const url = `https://docs.google.com/spreadsheets/d/1f_rtQ_rGuj95fflCU31Lme7vOrK5UQdiexAZ9lj3nvs/edit?usp=sharing/${SHEET_ID}/values/${RANGE_PARTENAIRES}?key=${API_KEY}`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE_PARTENAIRES}?key=${API_KEY}`;
   const res = await fetch(url);
   const data = await res.json();
   if(data.values){
-    data.values.forEach(row => { partenaires[row[0]] = row[1]; });
-  }
-}
-
-async function loadTransactions() {
-  const url = `https://docs.google.com/spreadsheets/d/1f_rtQ_rGuj95fflCU31Lme7vOrK5UQdiexAZ9lj3nvs/edit?usp=sharing/${SHEET_ID}/values/${RANGE_TRANSACTIONS}?key=${API_KEY}`;
-  const res = await fetch(url);
-  const data = await res.json();
-  transactions = [];
-  if(data.values){
-    data.values.forEach(row=>{
-      transactions.push({id:row[0], nomChauffeur:row[1], montant:parseFloat(row[2]), date:row[3]});
+    data.values.forEach(row => {
+      const id = row[0];
+      const nom = row[1];
+      partenaires[id] = nom;
     });
   }
 }
 
-// Valider ID partenaire
+// Charger les transactions depuis Google Sheets
+async function loadTransactions() {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE_TRANSACTIONS}?key=${API_KEY}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  transactions = [];
+  if(data.values){
+    data.values.forEach(row => {
+      transactions.push({
+        id: row[0],
+        nomChauffeur: row[1],
+        montant: parseFloat(row[2]),
+        date: row[3]
+      });
+    });
+  }
+}
+
+// Vérifier ID et afficher interface
 async function chargerPartenaire() {
   await loadPartenaires();
   await loadTransactions();
@@ -88,55 +85,32 @@ async function chargerPartenaire() {
   document.getElementById('nomPartenaire').textContent = "Partenaire : " + partenaires[id];
   document.getElementById('interfacePartenaire').style.display = "block";
   updateTotalDepense();
-  updateHistorique();
 }
 
-// Ajouter nouvelle dépense (figée)
+// Ajouter nouvelle dépense
 function ajouterDepense() {
   const montant = parseFloat(document.getElementById('montantDepense').value);
-  if(!montant || montant <=0){ alert("Montant invalide"); return; }
+  if(!montant || montant <=0) { alert("Montant invalide"); return; }
 
   const nomChauffeur = prompt("Nom du chauffeur ?");
   if(!nomChauffeur){ alert("Nom du chauffeur obligatoire"); return; }
 
   const date = new Date().toISOString().slice(0,10);
 
-  // Vérifier doublon exact du même chauffeur à la même date
-  const existe = transactions.find(t=>t.id===idConnecte && t.nomChauffeur===nomChauffeur && t.date===date);
-  if(existe){
-    alert("Cette dépense est déjà enregistrée et figée !");
-    return;
-  }
-
-  // Ajouter transaction figée
+  // Ajouter à mémoire (à connecter à export Google Sheet via Apps Script)
   transactions.push({id:idConnecte, nomChauffeur, montant, date});
-
-  // Désactiver champ pour ce chauffeur ce jour
   document.getElementById('montantDepense').value = "";
   updateTotalDepense();
-  updateHistorique();
-  alert("Montant validé et figé !");
+  alert("Montant validé !");
 }
 
-// Mettre à jour total dépensé
-function updateTotalDepense(){
+// Mettre à jour total dépense
+function updateTotalDepense() {
   let total = 0;
   transactions.forEach(t => { if(t.id===idConnecte) total += t.montant; });
   document.getElementById('totalDepense').textContent = "Total dépensé chez vous : " + total + " DA";
 }
 
-// Mettre à jour l'historique
-function updateHistorique(){
-  const tbody = document.querySelector('#historique tbody');
-  tbody.innerHTML = "";
-  transactions.forEach(t=>{
-    if(t.id===idConnecte){
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${t.nomChauffeur}</td><td>${t.montant}</td><td>${t.date}</td>`;
-      tbody.appendChild(tr);
-    }
-  });
-}
 </script>
 
 </body>
