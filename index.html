@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carte NFC – Académie de Football</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f4f6f8;
+    color: #222;
+}
+
+.container {
+    max-width: 420px;
+    margin: auto;
+    padding: 15px;
+}
+
+.academy-name {
+    text-align: center;
+    font-size: 26px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.player-image {
+    height: 226px; /* 60 mm */
+    background: #ddd;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.player-image img {
+    max-height: 100%;
+    max-width: 100%;
+    border-radius: 10px;
+}
+
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.card h3 {
+    margin-top: 0;
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+
+.btn {
+    width: 100%;
+    padding: 15px;
+    background: #1e88e5;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.footer {
+    text-align: center;
+    font-size: 13px;
+    color: #777;
+    margin-top: 20px;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+    <div class="academy-name">Académie Football Excellence</div>
+
+    <div class="player-image">
+        <img src="joueur.jpg" alt="Photo du joueur">
+    </div>
+
+    <div class="card">
+        <h3>Informations du joueur</h3>
+        <p><strong>Nom :</strong> BENKACEM</p>
+        <p><strong>Prénom :</strong> Ahmed</p>
+        <p><strong>Âge :</strong> 13 ans</p>
+        <p><strong>Poids :</strong> 45 kg</p>
+        <p><strong>Catégorie :</strong> U13</p>
+        <p><strong>Année sportive :</strong> 2025 – 2026</p>
+    </div>
+
+    <div class="card">
+        <h3>Académie</h3>
+        <p><strong>Entraîneur :</strong> Coach Mourad</p>
+        <p><strong>Téléphone :</strong> <a href="tel:+213555000000">+213 555 00 00 00</a></p>
+        <p><strong>Facebook :</strong> <a href="https://facebook.com/academie" target="_blank">Page officielle</a></p>
+    </div>
+
+    <button class="btn" onclick="envoyerPresence()">✔ Enregistrer ma présence</button>
+
+    <div class="footer">Carte NFC officielle – Académie</div>
+
+</div>
+
+<script>
+function envoyerPresence() {
+    const data = {
+        nom: "BENKACEM",
+        prenom: "Ahmed",
+        categorie: "U13",
+        saison: "2025-2026"
+    };
+
+    fetch("COLLE_ICI_L_URL_DU_SCRIPT_GOOGLE", {
+        method: "POST",
+        body: JSON.stringify(data),
+        headers: {"Content-Type": "application/json"}
+    })
+    .then(() => alert("Présence enregistrée avec succès ✅"))
+    .catch(() => alert("Erreur lors de l’enregistrement ❌"));
+}
+</script>
+</body>
+</html>
