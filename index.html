@@ -55,7 +55,7 @@ let idConnecte = "";
 
 // Charger partenaires et transactions
 async function loadPartenaires() {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE_PARTENAIRES}?key=${API_KEY}`;
+  const url = `https://docs.google.com/spreadsheets/d/e/2PACX-1vTpcg_Q1oM5vXBuJJ8IVLMbifT3STsLMUh1fXv7XqJWXczoMi1VVW8YACHy-Dik0mNpV2ksIANqdtb9/pub?output=csv/${SHEET_ID}/values/${RANGE_PARTENAIRES}?key=${API_KEY}`;
   const res = await fetch(url);
   const data = await res.json();
   if(data.values){
@@ -64,7 +64,7 @@ async function loadPartenaires() {
 }
 
 async function loadTransactions() {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE_TRANSACTIONS}?key=${API_KEY}`;
+  const url = `https://docs.google.com/spreadsheets/d/e/2PACX-1vTpcg_Q1oM5vXBuJJ8IVLMbifT3STsLMUh1fXv7XqJWXczoMi1VVW8YACHy-Dik0mNpV2ksIANqdtb9/pub?output=csv/${SHEET_ID}/values/${RANGE_TRANSACTIONS}?key=${API_KEY}`;
   const res = await fetch(url);
   const data = await res.json();
   transactions = [];
