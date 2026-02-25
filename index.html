@@ -2,20 +2,18 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Validation Montant Partenaire Dynamique</title>
+<title>Validation Montant Partenaire</title>
 <style>
 body { font-family: Arial, sans-serif; padding: 20px; }
 label { margin-right: 10px; }
-input[type=text] { width: 120px; }
+input[type=number] { width: 120px; }
 button { padding: 5px 10px; margin-left: 5px; }
-#interfacePartenaire { display:none; margin-top:20px; }
-#historique { border-collapse: collapse; width: 100%; margin-top: 10px; }
-#historique th, #historique td { border: 1px solid #333; padding: 5px; text-align: center; }
+.valid { background-color: #d3ffd3; }
 </style>
 </head>
 <body>
 
-<h2>Validation Montant Partenaire Dynamique</h2>
+<h2>Validation Montant Partenaire</h2>
 
 <div>
   <label>Votre ID Partenaire :</label>
@@ -23,13 +21,15 @@ button { padding: 5px 10px; margin-left: 5px; }
   <button onclick="chargerPartenaire()">Valider ID</button>
 </div>
 
-<div id="interfacePartenaire">
+<div id="interfacePartenaire" style="display:none; margin-top:20px;">
   <p id="nomPartenaire"></p>
-  <p>Total dépensé chez vous : <span id="totalDepense">0</span> DA</p>
-  <button onclick="entrerMontant()">Entrer Montant</button>
+  <label>Montant dépensé (DA) :</label>
+  <input type="number" id="montantDepense">
+  <button onclick="ajouterDepense()">Valider Montant</button>
+  <p id="totalDepense">Total dépensé chez vous : 0 DA</p>
 
   <h3>Historique des transactions</h3>
-  <table id="historique">
+  <table id="historique" border="1" cellpadding="5">
     <thead>
       <tr>
         <th>Nom Chauffeur</th>
@@ -42,16 +42,43 @@ button { padding: 5px 10px; margin-left: 5px; }
 </div>
 
 <script>
-// Configuration Google Sheets via Apps Script Web App
-const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbz2jR-fy82q5F_SnSrLFd0hbWtddmw23z2tHbn3iM1Pme84I38ukdr9iQHcJbCfLibOIw/exec"; // Web App pour export automatique
+// Configuration Google Sheets
+const SHEET_ID = "TON_SHEET_ID";
+const RANGE_PARTENAIRES = "Partenaires!A:B";
+const RANGE_TRANSACTIONS = "Transactions!A:D";
+const API_KEY = "TON_API_KEY";
 
 // Données locales
-let partenaires = {"P123":"Partenaire A","P456":"Partenaire B"}; // exemple, peut être chargé depuis Sheets
-let transactions = []; // en mémoire
+let partenaires = {};
+let transactions = [];
 let idConnecte = "";
 
+// Charger partenaires et transactions
+async function loadPartenaires() {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE_PARTENAIRES}?key=${API_KEY}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if(data.values){
+    data.values.forEach(row => { partenaires[row[0]] = row[1]; });
+  }
+}
+
+async function loadTransactions() {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE_TRANSACTIONS}?key=${API_KEY}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  transactions = [];
+  if(data.values){
+    data.values.forEach(row=>{
+      transactions.push({id:row[0], nomChauffeur:row[1], montant:parseFloat(row[2]), date:row[3]});
+    });
+  }
+}
+
 // Valider ID partenaire
-function chargerPartenaire() {
+async function chargerPartenaire() {
+  await loadPartenaires();
+  await loadTransactions();
   const id = document.getElementById('idPartenaire').value.trim();
   if(!id || !partenaires[id]){
     alert("ID Partenaire invalide !");
@@ -64,39 +91,38 @@ function chargerPartenaire() {
   updateHistorique();
 }
 
-// Bouton Entrer Montant
-function entrerMontant() {
-  const montant = parseFloat(prompt("Entrez le montant dépensé (DA) :"));
+// Ajouter nouvelle dépense (figée)
+function ajouterDepense() {
+  const montant = parseFloat(document.getElementById('montantDepense').value);
   if(!montant || montant <=0){ alert("Montant invalide"); return; }
-  const nomChauffeur = prompt("Nom du chauffeur :");
-  if(!nomChauffeur){ alert("Nom obligatoire"); return; }
+
+  const nomChauffeur = prompt("Nom du chauffeur ?");
+  if(!nomChauffeur){ alert("Nom du chauffeur obligatoire"); return; }
+
   const date = new Date().toISOString().slice(0,10);
 
-  // Ajouter en mémoire
+  // Vérifier doublon exact du même chauffeur à la même date
+  const existe = transactions.find(t=>t.id===idConnecte && t.nomChauffeur===nomChauffeur && t.date===date);
+  if(existe){
+    alert("Cette dépense est déjà enregistrée et figée !");
+    return;
+  }
+
+  // Ajouter transaction figée
   transactions.push({id:idConnecte, nomChauffeur, montant, date});
+
+  // Désactiver champ pour ce chauffeur ce jour
+  document.getElementById('montantDepense').value = "";
   updateTotalDepense();
   updateHistorique();
-  
-  // Envoyer automatiquement à Google Sheets via Apps Script
-  fetch(URL_APPS_SCRIPT,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({transactions:[{id:idConnecte, nomChauffeur, montant, date}]})
-  }).then(res=>res.json())
-    .then(data=>{
-      if(data.success){
-        console.log("Transaction enregistrée sur Google Sheets");
-      } else {
-        console.error("Erreur export Google Sheets:", data.message);
-      }
-    }).catch(err=>console.error(err));
+  alert("Montant validé et figé !");
 }
 
 // Mettre à jour total dépensé
 function updateTotalDepense(){
   let total = 0;
-  transactions.forEach(t=>{ if(t.id===idConnecte) total+=t.montant; });
-  document.getElementById('totalDepense').textContent = total;
+  transactions.forEach(t => { if(t.id===idConnecte) total += t.montant; });
+  document.getElementById('totalDepense').textContent = "Total dépensé chez vous : " + total + " DA";
 }
 
 // Mettre à jour l'historique
