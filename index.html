@@ -15,7 +15,6 @@ input { padding:10px; margin:10px; border-radius:6px; border:1px solid #ccc; }
 .card { background:white; padding:20px; margin:auto; width:320px; border-radius:12px; box-shadow:0 5px 15px rgba(0,0,0,0.1); }
 </style>
 </head>
-
 <body>
 <div class="container">
 
@@ -54,26 +53,31 @@ input { padding:10px; margin:10px; border-radius:6px; border:1px solid #ccc; }
 
 <script>
 // 🔹 URL Apps Script
-const scriptURL = "https://script.google.com/macros/s/AKfycbxjKCay86qSSZJV7Q_nPT7Pg3zZ2EaVxDF9kOAcRXEljwUHUs3TOh3PP3TjphYUkzDXYA/exec"; // mettre URL complète
+const scriptURL = "https://script.google.com/macros/library/d/1aCW78NjD7ZmzRV0IR1as2IN2qmFlEkZUMFLoANSOg_AQrjm6hVLUf6Y-/3"; // mettre URL complète
 
 let currentPartner = "";
 
-// ✅ VALIDATION CODE PARTENAIRE
+// ✅ VALIDATION CODE PARTENAIRE DYNAMIQUE
 function login(){
     const code = document.getElementById("partnerCode").value.trim();
     if(code === "") return alert("Entrer un code partenaire");
 
-    // Si tu veux tester en local
-    const validPartners = ["P001","P002","P003"];
-    if(!validPartners.includes(code)){
-        alert("Code partenaire invalide !");
-        document.getElementById("partnerCode").value = "";
-        return;
-    }
-
-    currentPartner = code;
-    document.getElementById("login").classList.add("hidden");
-    document.getElementById("scanPage").classList.remove("hidden");
+    fetch(scriptURL, {
+        method:"POST",
+        body: JSON.stringify({action:"checkPartner", partner: code})
+    })
+    .then(res=>res.json())
+    .then(data=>{
+        if(data.status==="success"){
+            currentPartner = code;
+            document.getElementById("login").classList.add("hidden");
+            document.getElementById("scanPage").classList.remove("hidden");
+        } else {
+            alert("Code partenaire invalide !");
+            document.getElementById("partnerCode").value = "";
+        }
+    })
+    .catch(err=>alert("Erreur de connexion : "+err));
 }
 
 // 🔹 SCAN CARTE NFC
@@ -110,6 +114,7 @@ function validateAmount(){
     fetch(scriptURL, {
         method: "POST",
         body: JSON.stringify({
+            action:"saveTransaction",
             partner: currentPartner,
             driverId: document.getElementById("driverId").textContent,
             nom: document.getElementById("driverName").textContent,
@@ -130,7 +135,8 @@ function validateAmount(){
         } else {
             alert("Erreur enregistrement transaction !");
         }
-    });
+    })
+    .catch(err => alert("Erreur connexion Apps Script : "+err));
 
     // 🔒 Figer le champ
     document.getElementById("amount").disabled = true;
