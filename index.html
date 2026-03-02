@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Interface Partenaire</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interface Partenaire NFC</title>
 <style>
 body { font-family: Arial; text-align:center; background:#f4f6f9; }
 .container { margin-top:40px; }
@@ -16,9 +17,9 @@ input { padding:10px; margin:10px; border-radius:6px; border:1px solid #ccc; }
 </head>
 
 <body>
-
 <div class="container">
 
+<!-- PAGE LOGIN PARTENAIRE -->
 <div id="login">
     <h2>Connexion Partenaire</h2>
     <input type="password" id="partnerCode" placeholder="Code partenaire">
@@ -26,6 +27,7 @@ input { padding:10px; margin:10px; border-radius:6px; border:1px solid #ccc; }
     <button class="primary" onclick="login()">Valider</button>
 </div>
 
+<!-- PAGE SCAN CHAUFFEUR -->
 <div id="scanPage" class="hidden">
 <div class="card">
     <h3>Scanner Carte Chauffeur</h3>
@@ -36,54 +38,74 @@ input { padding:10px; margin:10px; border-radius:6px; border:1px solid #ccc; }
     <p>Prénom : <span id="driverSurname"></span></p>
 
     <input type="number" id="amount" placeholder="Montant" disabled>
-    <button id="validateBtn" class="success hidden" onclick="validateAmount()">Valider</button>
+    <button id="validateBtn" class="success hidden" onclick="validateAmount()">Valider Montant</button>
 </div>
 </div>
 
+<!-- PAGE PARTENAIRE – MONTANT VALIDÉ -->
 <div id="partnerHome" class="hidden">
     <h2>Transaction enregistrée</h2>
     <h1 id="lastAmount" style="color:green;"></h1>
+    <p id="driverInfo"></p>
     <button onclick="newTransaction()">Nouvelle transaction</button>
 </div>
 
 </div>
 
 <script>
+// 🔹 URL Apps Script
+const scriptURL = "https://script.google.com/macros/s/AKfycbxjKCay86qSSZJV7Q_nPT7Pg3zZ2EaVxDF9kOAcRXEljwUHUs3TOh3PP3TjphYUkzDXYA/exec"; // mettre URL complète
 
 let currentPartner = "";
-const scriptURL = "https://script.google.com/macros/s/AKfycbxjKCay86qSSZJV7Q_nPT7Pg3zZ2EaVxDF9kOAcRXEljwUHUs3TOh3PP3TjphYUkzDXYA/exec";
 
+// ✅ VALIDATION CODE PARTENAIRE
 function login(){
-    currentPartner = document.getElementById("partnerCode").value;
+    const code = document.getElementById("partnerCode").value.trim();
+    if(code === "") return alert("Entrer un code partenaire");
+
+    // Si tu veux tester en local
+    const validPartners = ["P001","P002","P003"];
+    if(!validPartners.includes(code)){
+        alert("Code partenaire invalide !");
+        document.getElementById("partnerCode").value = "";
+        return;
+    }
+
+    currentPartner = code;
     document.getElementById("login").classList.add("hidden");
     document.getElementById("scanPage").classList.remove("hidden");
 }
 
+// 🔹 SCAN CARTE NFC
 async function scanCard(){
     if ('NDEFReader' in window) {
         const ndef = new NDEFReader();
-        await ndef.scan();
-        ndef.onreading = event => {
-            const decoder = new TextDecoder();
-            const data = decoder.decode(event.message.records[0].data);
-            const driver = JSON.parse(data);
+        try {
+            await ndef.scan();
+            ndef.onreading = event => {
+                const decoder = new TextDecoder();
+                const data = decoder.decode(event.message.records[0].data);
+                const driver = JSON.parse(data);
 
-            document.getElementById("driverId").textContent = driver.driverId;
-            document.getElementById("driverName").textContent = driver.nom;
-            document.getElementById("driverSurname").textContent = driver.prenom;
+                document.getElementById("driverId").textContent = driver.driverId;
+                document.getElementById("driverName").textContent = driver.nom;
+                document.getElementById("driverSurname").textContent = driver.prenom;
 
-            document.getElementById("amount").disabled = false;
-            document.getElementById("validateBtn").classList.remove("hidden");
-        };
+                document.getElementById("amount").disabled = false;
+                document.getElementById("validateBtn").classList.remove("hidden");
+            };
+        } catch(err) {
+            alert("Erreur scan NFC : " + err);
+        }
     } else {
-        alert("NFC non supporté");
+        alert("NFC non supporté sur ce navigateur");
     }
 }
 
+// 🔹 VALIDATION MONTANT ET ENVOI GOOGLE SHEETS
 function validateAmount(){
-
-    const montant = document.getElementById("amount").value;
-    if(montant === "") return alert("Entrer un montant");
+    const montant = document.getElementById("amount").value.trim();
+    if(montant === "" || isNaN(montant)) return alert("Entrer un montant valide");
 
     fetch(scriptURL, {
         method: "POST",
@@ -101,19 +123,32 @@ function validateAmount(){
             document.getElementById("scanPage").classList.add("hidden");
             document.getElementById("partnerHome").classList.remove("hidden");
             document.getElementById("lastAmount").textContent = montant + " DA";
+            document.getElementById("driverInfo").textContent =
+                "Chauffeur : " + document.getElementById("driverName").textContent + " " +
+                document.getElementById("driverSurname").textContent +
+                " (ID: " + document.getElementById("driverId").textContent + ")";
+        } else {
+            alert("Erreur enregistrement transaction !");
         }
     });
 
+    // 🔒 Figer le champ
     document.getElementById("amount").disabled = true;
+    document.getElementById("validateBtn").classList.add("hidden");
 }
 
+// 🔹 NOUVELLE TRANSACTION
 function newTransaction(){
     document.getElementById("partnerHome").classList.add("hidden");
     document.getElementById("scanPage").classList.remove("hidden");
-    document.getElementById("amount").value="";
-    document.getElementById("amount").disabled=true;
-}
 
+    document.getElementById("amount").value = "";
+    document.getElementById("amount").disabled = true;
+
+    document.getElementById("driverId").textContent = "";
+    document.getElementById("driverName").textContent = "";
+    document.getElementById("driverSurname").textContent = "";
+}
 </script>
 
 </body>
