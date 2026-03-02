@@ -1,50 +1,17 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Interface Partenaire</title>
 <style>
-body {
-    font-family: Arial;
-    text-align: center;
-    background: #f5f7fa;
-}
-.container {
-    margin-top: 50px;
-}
-button {
-    padding: 12px 20px;
-    margin: 10px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-}
-.primary {
-    background: #2563eb;
-    color: white;
-}
-.success {
-    background: #16a34a;
-    color: white;
-}
-input {
-    padding: 10px;
-    margin: 10px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-}
-.hidden {
-    display: none;
-}
-.card {
-    background: white;
-    padding: 20px;
-    margin: 20px auto;
-    width: 300px;
-    border-radius: 12px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-}
+body { font-family: Arial; text-align:center; background:#f4f6f9; }
+.container { margin-top:40px; }
+button { padding:12px 20px; margin:10px; border:none; border-radius:8px; cursor:pointer; }
+.primary { background:#2563eb; color:white; }
+.success { background:#16a34a; color:white; }
+input { padding:10px; margin:10px; border-radius:6px; border:1px solid #ccc; }
+.hidden { display:none; }
+.card { background:white; padding:20px; margin:auto; width:320px; border-radius:12px; box-shadow:0 5px 15px rgba(0,0,0,0.1); }
 </style>
 </head>
 
@@ -52,104 +19,99 @@ input {
 
 <div class="container">
 
-    <!-- PAGE 1 -->
-    <div id="page1">
-        <button class="primary" onclick="showLogin()">Entrer Code Partenaire</button>
-    </div>
+<div id="login">
+    <h2>Connexion Partenaire</h2>
+    <input type="password" id="partnerCode" placeholder="Code partenaire">
+    <br>
+    <button class="primary" onclick="login()">Valider</button>
+</div>
 
-    <!-- PAGE 2 -->
-    <div id="page2" class="hidden">
-        <h3>Code Partenaire</h3>
-        <input type="password" id="partnerCode" placeholder="Entrer votre code">
-        <br>
-        <button class="primary" onclick="checkCode()">Valider</button>
-    </div>
+<div id="scanPage" class="hidden">
+<div class="card">
+    <h3>Scanner Carte Chauffeur</h3>
+    <button class="primary" onclick="scanCard()">Scanner NFC</button>
 
-    <!-- PAGE 3 -->
-    <div id="page3" class="hidden">
+    <p>ID : <span id="driverId"></span></p>
+    <p>Nom : <span id="driverName"></span></p>
+    <p>Prénom : <span id="driverSurname"></span></p>
 
-        <div class="card">
-            <h3>Scanner Carte Chauffeur</h3>
-            <button class="primary" onclick="scanCard()">Scanner NFC</button>
+    <input type="number" id="amount" placeholder="Montant" disabled>
+    <button id="validateBtn" class="success hidden" onclick="validateAmount()">Valider</button>
+</div>
+</div>
 
-            <p><b>ID :</b> <span id="driverId"></span></p>
-            <p><b>Nom :</b> <span id="driverName"></span></p>
-            <p><b>Prénom :</b> <span id="driverSurname"></span></p>
-
-            <hr>
-
-            <input type="number" id="amount" placeholder="Montant d'achat" disabled>
-            <br>
-            <button class="success hidden" id="validateBtn" onclick="validateAmount()">Valider Montant</button>
-
-        </div>
-
-    </div>
+<div id="partnerHome" class="hidden">
+    <h2>Transaction enregistrée</h2>
+    <h1 id="lastAmount" style="color:green;"></h1>
+    <button onclick="newTransaction()">Nouvelle transaction</button>
+</div>
 
 </div>
 
 <script>
 
-const validPartners = ["P001","P002","P003"];
+let currentPartner = "";
+const scriptURL = "https://script.google.com/macros/s/AKfycbxjKCay86qSSZJV7Q_nPT7Pg3zZ2EaVxDF9kOAcRXEljwUHUs3TOh3PP3TjphYUkzDXYA/exec";
 
-function showLogin(){
-    document.getElementById("page1").classList.add("hidden");
-    document.getElementById("page2").classList.remove("hidden");
-}
-
-function checkCode(){
-    const code = document.getElementById("partnerCode").value;
-
-    if(validPartners.includes(code)){
-        document.getElementById("page2").classList.add("hidden");
-        document.getElementById("page3").classList.remove("hidden");
-    }else{
-        alert("Code invalide");
-    }
+function login(){
+    currentPartner = document.getElementById("partnerCode").value;
+    document.getElementById("login").classList.add("hidden");
+    document.getElementById("scanPage").classList.remove("hidden");
 }
 
 async function scanCard(){
-
     if ('NDEFReader' in window) {
-
         const ndef = new NDEFReader();
         await ndef.scan();
-
         ndef.onreading = event => {
-
             const decoder = new TextDecoder();
+            const data = decoder.decode(event.message.records[0].data);
+            const driver = JSON.parse(data);
 
-            for (const record of event.message.records) {
-                const data = decoder.decode(record.data);
+            document.getElementById("driverId").textContent = driver.driverId;
+            document.getElementById("driverName").textContent = driver.nom;
+            document.getElementById("driverSurname").textContent = driver.prenom;
 
-                const driver = JSON.parse(data);
-
-                document.getElementById("driverId").textContent = driver.id;
-                document.getElementById("driverName").textContent = driver.nom;
-                document.getElementById("driverSurname").textContent = driver.prenom;
-
-                document.getElementById("amount").disabled = false;
-                document.getElementById("validateBtn").classList.remove("hidden");
-            }
+            document.getElementById("amount").disabled = false;
+            document.getElementById("validateBtn").classList.remove("hidden");
         };
-
     } else {
-        alert("NFC non supporté sur ce téléphone");
+        alert("NFC non supporté");
     }
 }
 
 function validateAmount(){
-    const amountInput = document.getElementById("amount");
 
-    if(amountInput.value === ""){
-        alert("Entrer un montant");
-        return;
-    }
+    const montant = document.getElementById("amount").value;
+    if(montant === "") return alert("Entrer un montant");
 
-    amountInput.disabled = true;
-    document.getElementById("validateBtn").classList.add("hidden");
+    fetch(scriptURL, {
+        method: "POST",
+        body: JSON.stringify({
+            partner: currentPartner,
+            driverId: document.getElementById("driverId").textContent,
+            nom: document.getElementById("driverName").textContent,
+            prenom: document.getElementById("driverSurname").textContent,
+            montant: montant
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.status === "success"){
+            document.getElementById("scanPage").classList.add("hidden");
+            document.getElementById("partnerHome").classList.remove("hidden");
+            document.getElementById("lastAmount").textContent = montant + " DA";
+        }
+    });
 
-    alert("Montant validé et figé !");
+    document.getElementById("amount").disabled = true;
+}
+
+function newTransaction(){
+    document.getElementById("partnerHome").classList.add("hidden");
+    document.getElementById("scanPage").classList.remove("hidden");
+    document.getElementById("amount").value="";
+    document.getElementById("amount").disabled=true;
 }
 
 </script>
