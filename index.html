@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Interface Partenaire</title>
+
 <style>
 body { font-family: Arial; text-align:center; background:#f4f6f9; }
 .container { margin-top:40px; }
@@ -14,107 +15,221 @@ input { padding:10px; margin:10px; border-radius:6px; border:1px solid #ccc; }
 .hidden { display:none; }
 .card { background:white; padding:20px; margin:auto; width:320px; border-radius:12px; box-shadow:0 5px 15px rgba(0,0,0,0.1); }
 </style>
+
 </head>
 <body>
+
 <div class="container">
 
-<!-- LOGIN PARTENAIRE -->
+<!-- PAGE LOGIN PARTENAIRE -->
 <div id="login">
 <h2>Connexion Partenaire</h2>
-<input type="password" id="partnerCode" placeholder="Code partenaire"><br>
+
+<input type="password" id="partnerCode" placeholder="Code partenaire">
+
+<br>
+
 <button class="primary" onclick="login()">Valider</button>
+
 </div>
 
-<!-- ID CHAUFFEUR -->
+
+<!-- PAGE ID CHAUFFEUR -->
 <div id="driverPage" class="hidden">
+
 <div class="card">
+
 <h3>Entrer ID Chauffeur</h3>
-<input id="driverIdInput" placeholder="ID Chauffeur"><br>
+
+<input id="driverIdInput" placeholder="ID Chauffeur">
+
+<br>
+
 <button class="primary" onclick="openAmount()">Continuer</button>
-</div>
+
 </div>
 
-<!-- MONTANT -->
+</div>
+
+
+<!-- PAGE MONTANT -->
 <div id="amountPage" class="hidden">
+
 <div class="card">
+
 <h3>Montant Achat</h3>
-<input type="number" id="amount" placeholder="Montant"><br>
+
+<input type="number" id="amount" placeholder="Montant">
+
+<br>
+
 <button class="success" onclick="validateAmount()">Valider Montant</button>
-</div>
+
 </div>
 
-<!-- SUCCESS -->
+</div>
+
+
+<!-- PAGE SUCCESS -->
 <div id="partnerHome" class="hidden">
+
 <h2>Transaction enregistrée</h2>
+
 <h1 id="lastAmount" style="color:green;"></h1>
+
 <p id="driverInfo"></p>
+
 <button onclick="newTransaction()">Nouvelle transaction</button>
+
 </div>
 
 </div>
+
 
 <script>
+
+const scriptURL = "https://script.google.com/macros/s/AKfycbxjah3_W0w_Atza7Xw5SB7Aw3ZcfYIVYgIp_u80I3EuqgR5D4WleClw4Em_cwsVhowbnQ/exec";
+
 let currentPartner="";
 let currentDriver="";
 let driverNom="";
 let driverPrenom="";
 
-// LOGIN PARTENAIRE
-function login(){
-  const code = document.getElementById("partnerCode").value.trim();
-  if(code===""){ alert("Entrer code partenaire"); return; }
 
-  google.script.run.withSuccessHandler(function(data){
-    if(data.status==="success"){
-      currentPartner=code;
-      document.getElementById("login").classList.add("hidden");
-      document.getElementById("driverPage").classList.remove("hidden");
-    } else {
-      alert("Code partenaire invalide");
-    }
-  }).checkPartner(code);
+// VALIDATION PARTENAIRE
+function login(){
+
+const code=document.getElementById("partnerCode").value.trim();
+
+if(code===""){
+alert("Entrer code partenaire");
+return;
 }
+
+fetch(scriptURL,{
+method:"POST",
+body:JSON.stringify({
+action:"checkPartner",
+partner:code
+})
+})
+.then(res=>res.json())
+.then(data=>{
+
+if(data.status==="success"){
+
+currentPartner=code;
+
+document.getElementById("login").classList.add("hidden");
+document.getElementById("driverPage").classList.remove("hidden");
+
+}else{
+
+alert("Code partenaire invalide");
+
+}
+
+})
+.catch(err=>alert("Erreur connexion : "+err));
+
+}
+
 
 // VERIFICATION ID CHAUFFEUR
 function openAmount(){
-  const driver = document.getElementById("driverIdInput").value.trim();
-  if(driver===""){ alert("Entrer ID chauffeur"); return; }
 
-  google.script.run.withSuccessHandler(function(data){
-    if(data.status==="found"){
-      currentDriver = driver;
-      driverNom = data.nom;
-      driverPrenom = data.prenom;
-      document.getElementById("driverPage").classList.add("hidden");
-      document.getElementById("amountPage").classList.remove("hidden");
-    } else {
-      alert("ID chauffeur introuvable");
-    }
-  }).checkDriver(driver);
+const driver=document.getElementById("driverIdInput").value.trim();
+
+if(driver===""){
+alert("Entrer ID chauffeur");
+return;
 }
+
+fetch(scriptURL,{
+method:"POST",
+body:JSON.stringify({
+action:"checkDriver",
+driverId:driver
+})
+})
+.then(res=>res.json())
+.then(data=>{
+
+if(data.status==="found"){
+
+currentDriver=driver;
+driverNom=data.nom;
+driverPrenom=data.prenom;
+
+document.getElementById("driverPage").classList.add("hidden");
+document.getElementById("amountPage").classList.remove("hidden");
+
+}else{
+
+alert("ID chauffeur introuvable");
+
+}
+
+})
+.catch(err=>alert("Erreur connexion chauffeur : "+err));
+
+}
+
 
 // ENREGISTRER TRANSACTION
 function validateAmount(){
-  const montant = document.getElementById("amount").value;
-  if(montant===""){ alert("Entrer un montant"); return; }
 
-  google.script.run.withSuccessHandler(function(data){
-    if(data.status==="success"){
-      document.getElementById("amountPage").classList.add("hidden");
-      document.getElementById("partnerHome").classList.remove("hidden");
-      document.getElementById("lastAmount").textContent = montant+" DA";
-      document.getElementById("driverInfo").textContent = driverNom+" "+driverPrenom+" (ID : "+currentDriver+")";
-    }
-  }).saveTransaction(currentPartner, currentDriver, driverNom, driverPrenom, montant);
+const montant=document.getElementById("amount").value;
+
+if(montant===""){
+alert("Entrer un montant");
+return;
 }
+
+fetch(scriptURL,{
+method:"POST",
+body:JSON.stringify({
+action:"saveTransaction",
+partner:currentPartner,
+driverId:currentDriver,
+nom:driverNom,
+prenom:driverPrenom,
+amount:montant
+})
+})
+.then(res=>res.json())
+.then(data=>{
+
+if(data.status==="success"){
+
+document.getElementById("amountPage").classList.add("hidden");
+document.getElementById("partnerHome").classList.remove("hidden");
+
+document.getElementById("lastAmount").textContent=montant+" DA";
+
+document.getElementById("driverInfo").textContent =
+driverNom + " " + driverPrenom + " (ID : " + currentDriver + ")";
+
+}
+
+})
+.catch(err=>alert("Erreur Apps Script : "+err));
+
+}
+
 
 // NOUVELLE TRANSACTION
 function newTransaction(){
-  document.getElementById("partnerHome").classList.add("hidden");
-  document.getElementById("driverPage").classList.remove("hidden");
-  document.getElementById("driverIdInput").value="";
-  document.getElementById("amount").value="";
+
+document.getElementById("partnerHome").classList.add("hidden");
+document.getElementById("driverPage").classList.remove("hidden");
+
+document.getElementById("driverIdInput").value="";
+document.getElementById("amount").value="";
+
 }
+
 </script>
+
 </body>
 </html>
