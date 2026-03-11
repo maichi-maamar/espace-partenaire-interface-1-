@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Interface Partenaire NFC</title>
+<title>Interface Partenaire</title>
+
 <style>
 body { font-family: Arial; text-align:center; background:#f4f6f9; }
 .container { margin-top:40px; }
@@ -14,147 +15,192 @@ input { padding:10px; margin:10px; border-radius:6px; border:1px solid #ccc; }
 .hidden { display:none; }
 .card { background:white; padding:20px; margin:auto; width:320px; border-radius:12px; box-shadow:0 5px 15px rgba(0,0,0,0.1); }
 </style>
+
 </head>
 <body>
+
 <div class="container">
 
 <!-- PAGE LOGIN PARTENAIRE -->
 <div id="login">
-    <h2>Connexion Partenaire</h2>
-    <input type="password" id="partnerCode" placeholder="Code partenaire">
-    <br>
-    <button class="primary" onclick="login()">Valider</button>
+<h2>Connexion Partenaire</h2>
+
+<input type="password" id="partnerCode" placeholder="Code partenaire">
+
+<br>
+
+<button class="primary" onclick="login()">Valider</button>
+
 </div>
 
-<!-- PAGE SCAN CHAUFFEUR -->
-<div id="scanPage" class="hidden">
+
+<!-- PAGE ID CHAUFFEUR -->
+<div id="driverPage" class="hidden">
+
 <div class="card">
-    <h3>Scanner Carte Chauffeur</h3>
-    <button class="primary" onclick="scanCard()">Scanner NFC</button>
 
-    <p>ID : <span id="driverId"></span></p>
-    <p>Nom : <span id="driverName"></span></p>
-    <p>Prénom : <span id="driverSurname"></span></p>
+<h3>Entrer ID Chauffeur</h3>
 
-    <input type="number" id="amount" placeholder="Montant" disabled>
-    <button id="validateBtn" class="success hidden" onclick="validateAmount()">Valider Montant</button>
+<input id="driverIdInput" placeholder="ID Chauffeur">
+
+<br>
+
+<button class="primary" onclick="openAmount()">Continuer</button>
+
 </div>
+
 </div>
 
-<!-- PAGE PARTENAIRE – MONTANT VALIDÉ -->
+
+<!-- PAGE MONTANT -->
+<div id="amountPage" class="hidden">
+
+<div class="card">
+
+<h3>Montant Achat</h3>
+
+<input type="number" id="amount" placeholder="Montant">
+
+<br>
+
+<button class="success" onclick="validateAmount()">Valider Montant</button>
+
+</div>
+
+</div>
+
+
+<!-- PAGE SUCCESS -->
 <div id="partnerHome" class="hidden">
-    <h2>Transaction enregistrée</h2>
-    <h1 id="lastAmount" style="color:green;"></h1>
-    <p id="driverInfo"></p>
-    <button onclick="newTransaction()">Nouvelle transaction</button>
+
+<h2>Transaction enregistrée</h2>
+
+<h1 id="lastAmount" style="color:green;"></h1>
+
+<p id="driverInfo"></p>
+
+<button onclick="newTransaction()">Nouvelle transaction</button>
+
 </div>
 
 </div>
+
 
 <script>
-// 🔹 URL Apps Script
-const scriptURL = "https://script.google.com/macros/s/AKfycbwvS1MVyYXOTtC2MUcsYKtgax5tXAWpGHj0B8rRJD1-XRV3fRqX1VyjO4u47f02Gxo7/exec"; // mettre URL complète
 
-let currentPartner = "";
+const scriptURL = "https://script.google.com/macros/s/AKfycbwvS1MVyYXOTtC2MUcsYKtgax5tXAWpGHj0B8rRJD1-XRV3fRqX1VyjO4u47f02Gxo7/exec";
 
-// ✅ VALIDATION CODE PARTENAIRE DYNAMIQUE
+let currentPartner="";
+let currentDriver="";
+
+
+// VALIDATION PARTENAIRE
 function login(){
-    const code = document.getElementById("partnerCode").value.trim();
-    if(code === "") return alert("Entrer un code partenaire");
 
-    fetch(scriptURL, {
-        method:"POST",
-        body: JSON.stringify({action:"checkPartner", partner: code})
-    })
-    .then(res=>res.json())
-    .then(data=>{
-        if(data.status==="success"){
-            currentPartner = code;
-            document.getElementById("login").classList.add("hidden");
-            document.getElementById("scanPage").classList.remove("hidden");
-        } else {
-            alert("Code partenaire invalide !");
-            document.getElementById("partnerCode").value = "";
-        }
-    })
-    .catch(err=>alert("Erreur de connexion : "+err));
+const code=document.getElementById("partnerCode").value.trim();
+
+if(code===""){
+alert("Entrer code partenaire");
+return;
 }
 
-// 🔹 SCAN CARTE NFC
-async function scanCard(){
-    if ('NDEFReader' in window) {
-        const ndef = new NDEFReader();
-        try {
-            await ndef.scan();
-            ndef.onreading = event => {
-                const decoder = new TextDecoder();
-                const data = decoder.decode(event.message.records[0].data);
-                const driver = JSON.parse(data);
+fetch(scriptURL,{
+method:"POST",
+body:JSON.stringify({
+action:"checkPartner",
+partner:code
+})
+})
+.then(res=>res.json())
+.then(data=>{
 
-                document.getElementById("driverId").textContent = driver.driverId;
-                document.getElementById("driverName").textContent = driver.nom;
-                document.getElementById("driverSurname").textContent = driver.prenom;
+if(data.status==="success"){
 
-                document.getElementById("amount").disabled = false;
-                document.getElementById("validateBtn").classList.remove("hidden");
-            };
-        } catch(err) {
-            alert("Erreur scan NFC : " + err);
-        }
-    } else {
-        alert("NFC non supporté sur ce navigateur");
-    }
+currentPartner=code;
+
+document.getElementById("login").classList.add("hidden");
+document.getElementById("driverPage").classList.remove("hidden");
+
+}else{
+
+alert("Code partenaire invalide");
+
 }
 
-// 🔹 VALIDATION MONTANT ET ENVOI GOOGLE SHEETS
+})
+.catch(err=>alert("Erreur connexion : "+err));
+
+}
+
+
+// PASSER A SAISIE MONTANT
+function openAmount(){
+
+const driver=document.getElementById("driverIdInput").value.trim();
+
+if(driver===""){
+alert("Entrer ID chauffeur");
+return;
+}
+
+currentDriver=driver;
+
+document.getElementById("driverPage").classList.add("hidden");
+document.getElementById("amountPage").classList.remove("hidden");
+
+}
+
+
+// ENREGISTRER TRANSACTION
 function validateAmount(){
-    const montant = document.getElementById("amount").value.trim();
-    if(montant === "" || isNaN(montant)) return alert("Entrer un montant valide");
 
-    fetch(scriptURL, {
-        method: "POST",
-        body: JSON.stringify({
-            action:"saveTransaction",
-            partner: currentPartner,
-            driverId: document.getElementById("driverId").textContent,
-            nom: document.getElementById("driverName").textContent,
-            prenom: document.getElementById("driverSurname").textContent,
-            montant: montant
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if(data.status === "success"){
-            document.getElementById("scanPage").classList.add("hidden");
-            document.getElementById("partnerHome").classList.remove("hidden");
-            document.getElementById("lastAmount").textContent = montant + " DA";
-            document.getElementById("driverInfo").textContent =
-                "Chauffeur : " + document.getElementById("driverName").textContent + " " +
-                document.getElementById("driverSurname").textContent +
-                " (ID: " + document.getElementById("driverId").textContent + ")";
-        } else {
-            alert("Erreur enregistrement transaction !");
-        }
-    })
-    .catch(err => alert("Erreur connexion Apps Script : "+err));
+const montant=document.getElementById("amount").value;
 
-    // 🔒 Figer le champ
-    document.getElementById("amount").disabled = true;
-    document.getElementById("validateBtn").classList.add("hidden");
+if(montant===""){
+alert("Entrer un montant");
+return;
 }
 
-// 🔹 NOUVELLE TRANSACTION
+fetch(scriptURL,{
+method:"POST",
+body:JSON.stringify({
+action:"saveTransaction",
+partner:currentPartner,
+driverId:currentDriver,
+amount:montant
+})
+})
+.then(res=>res.json())
+.then(data=>{
+
+if(data.status==="success"){
+
+document.getElementById("amountPage").classList.add("hidden");
+document.getElementById("partnerHome").classList.remove("hidden");
+
+document.getElementById("lastAmount").textContent=montant+" DA";
+
+document.getElementById("driverInfo").textContent="ID Chauffeur : "+currentDriver;
+
+}
+
+})
+.catch(err=>alert("Erreur Apps Script : "+err));
+
+}
+
+
+// NOUVELLE TRANSACTION
 function newTransaction(){
-    document.getElementById("partnerHome").classList.add("hidden");
-    document.getElementById("scanPage").classList.remove("hidden");
 
-    document.getElementById("amount").value = "";
-    document.getElementById("amount").disabled = true;
+document.getElementById("partnerHome").classList.add("hidden");
+document.getElementById("driverPage").classList.remove("hidden");
 
-    document.getElementById("driverId").textContent = "";
-    document.getElementById("driverName").textContent = "";
-    document.getElementById("driverSurname").textContent = "";
+document.getElementById("driverIdInput").value="";
+document.getElementById("amount").value="";
+
 }
+
 </script>
 
 </body>
