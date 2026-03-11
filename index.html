@@ -177,56 +177,64 @@ alert("ID chauffeur introuvable");
 
 
 // ENREGISTRER TRANSACTION
-function validateAmount(){
+function validateAmount() {
+  const montant = document.getElementById("amount").value.trim();
+  if (montant === "") { alert("Entrer un montant"); return; }
 
-const montant=document.getElementById("amount").value;
+  // 🔒 Désactiver le bouton et le champ pour un seul clic
+  const btn = document.getElementById("validateBtn");
+  btn.disabled = true;
+  btn.textContent = "Validation en cours...";
+  document.getElementById("amount").disabled = true;
 
-if(montant===""){
-alert("Entrer un montant");
-return;
-}
-
-fetch(scriptURL,{
-method:"POST",
-body:JSON.stringify({
-action:"saveTransaction",
-partner:currentPartner,
-driverId:currentDriver,
-nom:driverNom,
-prenom:driverPrenom,
-amount:montant
-})
-})
-.then(res=>res.json())
-.then(data=>{
-
-if(data.status==="success"){
-
-document.getElementById("amountPage").classList.add("hidden");
-document.getElementById("partnerHome").classList.remove("hidden");
-
-document.getElementById("lastAmount").textContent=montant+" DA";
-
-document.getElementById("driverInfo").textContent =
-driverNom + " " + driverPrenom + " (ID : " + currentDriver + ")";
-
-}
-
-})
-.catch(err=>alert("Erreur Apps Script : "+err));
-
+  fetch(scriptURL,{
+    method:"POST",
+    headers: { "Content-Type":"application/json" },
+    body: JSON.stringify({
+      action:"saveTransaction",
+      partner: currentPartner,
+      driverId: currentDriver,
+      nom: driverNom,
+      prenom: driverPrenom,
+      amount: montant
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status === "success") {
+      document.getElementById("amountPage").classList.add("hidden");
+      document.getElementById("partnerHome").classList.remove("hidden");
+      document.getElementById("lastAmount").textContent = montant + " DA";
+      document.getElementById("driverInfo").textContent = driverNom + " " + driverPrenom + " (ID : " + currentDriver + ")";
+    } else {
+      alert("Erreur lors de l'enregistrement");
+      // 🔓 Réactiver si erreur
+      btn.disabled = false;
+      btn.textContent = "Valider Montant";
+      document.getElementById("amount").disabled = false;
+    }
+  })
+  .catch(err => {
+    alert("Erreur Apps Script : "+err);
+    // 🔓 Réactiver en cas d'erreur réseau
+    btn.disabled = false;
+    btn.textContent = "Valider Montant";
+    document.getElementById("amount").disabled = false;
+  });
 }
 
 
 // NOUVELLE TRANSACTION
-function newTransaction(){
+function newTransaction() {
+  document.getElementById("partnerHome").classList.add("hidden");
+  document.getElementById("driverPage").classList.remove("hidden");
+  document.getElementById("driverIdInput").value = "";
+  document.getElementById("amount").value = "";
+  document.getElementById("amount").disabled = false;
 
-document.getElementById("partnerHome").classList.add("hidden");
-document.getElementById("driverPage").classList.remove("hidden");
-
-document.getElementById("driverIdInput").value="";
-document.getElementById("amount").value="";
-
+  const btn = document.getElementById("validateBtn");
+  btn.disabled = false;
+  btn.textContent = "Valider Montant";
 }
 
 </script>
