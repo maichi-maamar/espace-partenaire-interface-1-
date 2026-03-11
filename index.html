@@ -88,10 +88,12 @@ input { padding:10px; margin:10px; border-radius:6px; border:1px solid #ccc; }
 
 <script>
 
-const scriptURL = "https://script.google.com/macros/s/AKfycbwarAx-7QaqkLo0jM7zqyIgSrquGD5nkxa_QeRKEOyaNT7QQBZuaEkN_JRYs4vldwL81w/exec";
+const scriptURL = "https://script.google.com/macros/s/AKfycbzDO54j5S8FVMg6-SlabXSUUUuB4t8C1FZyMd2dwQdHI1Cmy4N3ckUGPwuSw14wRNmbyQ/exec";
 
 let currentPartner="";
 let currentDriver="";
+let driverNom="";
+let driverPrenom="";
 
 
 // VALIDATION PARTENAIRE
@@ -133,7 +135,7 @@ alert("Code partenaire invalide");
 }
 
 
-// PASSER A SAISIE MONTANT
+// VERIFICATION ID CHAUFFEUR
 function openAmount(){
 
 const driver=document.getElementById("driverIdInput").value.trim();
@@ -143,10 +145,33 @@ alert("Entrer ID chauffeur");
 return;
 }
 
+fetch(scriptURL,{
+method:"POST",
+body:JSON.stringify({
+action:"checkDriver",
+driverId:driver
+})
+})
+.then(res=>res.json())
+.then(data=>{
+
+if(data.status==="found"){
+
 currentDriver=driver;
+driverNom=data.nom;
+driverPrenom=data.prenom;
 
 document.getElementById("driverPage").classList.add("hidden");
 document.getElementById("amountPage").classList.remove("hidden");
+
+}else{
+
+alert("ID chauffeur introuvable");
+
+}
+
+})
+.catch(err=>alert("Erreur connexion chauffeur : "+err));
 
 }
 
@@ -167,6 +192,8 @@ body:JSON.stringify({
 action:"saveTransaction",
 partner:currentPartner,
 driverId:currentDriver,
+nom:driverNom,
+prenom:driverPrenom,
 amount:montant
 })
 })
@@ -180,7 +207,8 @@ document.getElementById("partnerHome").classList.remove("hidden");
 
 document.getElementById("lastAmount").textContent=montant+" DA";
 
-document.getElementById("driverInfo").textContent="ID Chauffeur : "+currentDriver;
+document.getElementById("driverInfo").textContent =
+driverNom + " " + driverPrenom + " (ID : " + currentDriver + ")";
 
 }
 
