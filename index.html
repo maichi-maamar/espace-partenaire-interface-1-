@@ -181,13 +181,15 @@ function validateAmount() {
   const montant = document.getElementById("amount").value.trim();
   if (montant === "") { alert("Entrer un montant"); return; }
 
-  // 🔒 Désactiver le bouton et le champ pour un seul clic
   const btn = document.getElementById("validateBtn");
+
+  // 🔒 Bloquer le bouton immédiatement pour un seul clic
+  if (btn.disabled) return;  // Si déjà désactivé, ne rien faire
   btn.disabled = true;
   btn.textContent = "Validation en cours...";
   document.getElementById("amount").disabled = true;
 
-  fetch(scriptURL,{
+  fetch(scriptURL, {
     method:"POST",
     headers: { "Content-Type":"application/json" },
     body: JSON.stringify({
@@ -206,9 +208,11 @@ function validateAmount() {
       document.getElementById("partnerHome").classList.remove("hidden");
       document.getElementById("lastAmount").textContent = montant + " DA";
       document.getElementById("driverInfo").textContent = driverNom + " " + driverPrenom + " (ID : " + currentDriver + ")";
+    } else if(data.status === "already") {
+      alert("Montant déjà enregistré pour ce chauffeur !");
+      // Laisser le champ et le bouton désactivé
     } else {
       alert("Erreur lors de l'enregistrement");
-      // 🔓 Réactiver si erreur
       btn.disabled = false;
       btn.textContent = "Valider Montant";
       document.getElementById("amount").disabled = false;
@@ -216,13 +220,11 @@ function validateAmount() {
   })
   .catch(err => {
     alert("Erreur Apps Script : "+err);
-    // 🔓 Réactiver en cas d'erreur réseau
     btn.disabled = false;
     btn.textContent = "Valider Montant";
     document.getElementById("amount").disabled = false;
   });
 }
-
 
 // NOUVELLE TRANSACTION
 function newTransaction() {
